@@ -25,53 +25,66 @@ import {
   MenuItem as SelectMenuItem,
   Paper,
 } from "@mui/material"
-import { Add, Logout, Person, TrendingUp, Brightness4, Brightness7 } from "@mui/icons-material"
-import type { User, TodoList } from "../types"
-import ListCard from "./ListCard"
+import { Add, Logout, Person, TrendingUp, Brightness4, Brightness7 } from "@mui/icons-material";
+import * as api from "../services/api";
+import type { User, TodoList } from "../types";
+import ListCard from "./ListCard";
 import CreateListDialog from "./CreateListDialog"
 import TaskDialog from "./TaskDialog"
 
 interface DashboardProps {
-  user: User
-  lists: TodoList[]
-  onUpdateLists: (lists: TodoList[]) => void
-  onLogout: () => void
-  darkMode: boolean
-  toggleTheme: () => void
+  user: User;
+  lists: TodoList[];
+  onListsChanged: () => void; // Changed from onUpdateLists
+  onLogout: () => void;
+  darkMode: boolean;
+  toggleTheme: () => void;
 }
 
-export default function Dashboard({ user, lists, onUpdateLists, onLogout, darkMode, toggleTheme }: DashboardProps) {
-  const [createListOpen, setCreateListOpen] = useState(false)
-  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+export default function Dashboard({ user, lists, onListsChanged, onLogout, darkMode, toggleTheme }: DashboardProps) {
+  const [createListOpen, setCreateListOpen] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   // États pour la recherche et le tri
   const [searchTerm, setSearchTerm] = useState("")
-  const [sortCriteria, setSortCriteria] = useState<"date" | "title">("date")
+  const [sortCriteria, setSortCriteria] = useState<"date" | "title">("date");
 
-  const handleCreateList = (title: string) => {
-    const newList: TodoList = {
-      id: Date.now().toString(),
-      title,
-      tasks: [],
-      createdAt: new Date().toISOString(),
+  const handleCreateList = async (title: string) => {
+    try {
+      await api.createList(title);
+      onListsChanged(); // Notify App.tsx to refresh lists
+    } catch (error) {
+      console.error("Failed to create list:", error);
+      // Optionally: show an error message to the user
     }
-    onUpdateLists([...lists, newList])
-  }
+  };
 
-  const handleDeleteList = (listId: string) => {
-    onUpdateLists(lists.filter((list) => list.id !== listId))
-  }
+  const handleDeleteList = async (listId: string) => {
+    try {
+      await api.deleteList(listId);
+      onListsChanged(); // Notify App.tsx to refresh lists
+    } catch (error) {
+      console.error("Failed to delete list:", error);
+      // Optionally: show an error message to the user
+    }
+  };
 
   const handleOpenTasks = (listId: string) => {
-    setSelectedListId(listId)
-    setTaskDialogOpen(true)
-  }
+    setSelectedListId(listId);
+    setTaskDialogOpen(true);
+  };
 
-  const handleUpdateList = (updatedList: TodoList) => {
-    onUpdateLists(lists.map((list) => (list.id === updatedList.id ? updatedList : list)))
-  }
+  const handleUpdateList = async (updatedList: TodoList) => {
+    try {
+      await api.updateList(updatedList);
+      onListsChanged(); // Notify App.tsx to refresh lists
+    } catch (error) {
+      console.error("Failed to update list:", error);
+      // Optionally: show an error message to the user
+    }
+  };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)

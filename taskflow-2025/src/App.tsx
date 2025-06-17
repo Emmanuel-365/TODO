@@ -1,48 +1,86 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ThemeProvider, createTheme } from "@mui/material/styles"
-import CssBaseline from "@mui/material/CssBaseline"
-import { Box } from "@mui/material"
-import AuthPage from "./components/AuthPage"
-import Dashboard from "./components/Dashboard"
+import { useState, useEffect } from "react";
+import * as api from "./services/api";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { Box, Typography, Button } from "@mui/material";
+import AuthPage from "./components/AuthPage";
+import Dashboard from "./components/Dashboard";
 import type { User, TodoList } from "./types"
 
 function App() {
-  const [user, setUser] = useState<User | null>(null)
-  const [lists, setLists] = useState<TodoList[]>([])
-  const [darkMode, setDarkMode] = useState(false)
+  const [user, setUser] = useState<User | null>(null);
+  const [lists, setLists] = useState<TodoList[]>([]);
+  const [darkMode, setDarkMode] = useState(false);
+  const [isLoadingLists, setIsLoadingLists] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Charger les données depuis localStorage
-    const savedUser = localStorage.getItem("taskflow_user")
-    const savedLists = localStorage.getItem("taskflow_lists")
-
+    const savedUser = localStorage.getItem("taskflow_user");
     if (savedUser) {
-      setUser(JSON.parse(savedUser))
+      setUser(JSON.parse(savedUser));
     }
 
-    if (savedLists) {
-      setLists(JSON.parse(savedLists))
-    }
-  }, [])
+    setIsLoadingLists(true);
+    setError(null); // Clear previous errors
+    api.getLists()
+      .then(fetchedLists => {
+        setLists(fetchedLists);
+      })
+      .catch(fetchError => {
+        console.error("Failed to fetch lists:", fetchError);
+        setError("Failed to load lists. Please try again later.");
+      })
+      .finally(() => {
+        setIsLoadingLists(false);
+      });
+  }, []);
 
   const handleLogin = (userData: User) => {
-    setUser(userData)
-    localStorage.setItem("taskflow_user", JSON.stringify(userData))
-  }
+    setUser(userData);
+    localStorage.setItem("taskflow_user", JSON.stringify(userData));
+
+    setIsLoadingLists(true);
+    setError(null); // Clear previous errors
+    api.getLists()
+      .then(fetchedLists => {
+        setLists(fetchedLists);
+      })
+      .catch(fetchError => {
+        console.error("Failed to fetch lists for user:", fetchError);
+        setError("Failed to load your data after login. Please try again.");
+      })
+      .finally(() => {
+        setIsLoadingLists(false);
+      });
+  };
 
   const handleLogout = () => {
-    setUser(null)
-    setLists([])
-    localStorage.removeItem("taskflow_user")
-    localStorage.removeItem("taskflow_lists")
-  }
+    setUser(null);
+    setLists([]); // Clear lists in state
+    localStorage.removeItem("taskflow_user");
+    // No need to call localStorage.removeItem("taskflow_lists") directly here anymore,
+    // as list operations should go through api.ts.
+    // If api.ts needs explicit clearing, a dedicated function like api.clearUserLists() could be added.
+    // For now, the next login will call api.getLists().
+  };
 
-  const updateLists = (newLists: TodoList[]) => {
-    setLists(newLists)
-    localStorage.setItem("taskflow_lists", JSON.stringify(newLists))
-  }
+  const handleListsUpdated = () => {
+    setIsLoadingLists(true);
+    setError(null); // Clear previous errors
+    api.getLists()
+      .then(fetchedLists => {
+        setLists(fetchedLists);
+      })
+      .catch(fetchError => {
+        console.error("Failed to fetch lists after update:", fetchError);
+        setError("Failed to update lists. Please check your connection or try again.");
+      })
+      .finally(() => {
+        setIsLoadingLists(false);
+      });
+  };
 
   const toggleTheme = () => {
     setDarkMode((prev) => !prev)
@@ -131,6 +169,35 @@ function App() {
     },
   })
 
+  })
+
+  if (error) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", p: 3 }}>
+          <Typography variant="h5" color="error" gutterBottom>
+            An Error Occurred
+          </Typography>
+          <Typography color="text.secondary">{error}</Typography>
+          <Button variant="contained" onClick={() => {
+            setError(null);
+            if (user) {
+              handleListsUpdated();
+            } else {
+              // For initial load error before user is set, re-trigger useEffect logic
+              // This is a simplified approach; ideally, useEffect would have its own retry.
+              // Or simply reload:
+              window.location.reload();
+            }
+          }} sx={{mt: 2}}>
+            Try Again
+          </Button>
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -141,10 +208,11 @@ function App() {
           <Dashboard
             user={user}
             lists={lists}
-            onUpdateLists={updateLists}
+            onListsChanged={handleListsUpdated}
             onLogout={handleLogout}
             darkMode={darkMode}
             toggleTheme={toggleTheme}
+            isLoadingLists={isLoadingLists} // Pass the loading state
           />
         )}
       </Box>
