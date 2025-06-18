@@ -11,7 +11,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional; // Important for tests that modify data
 
 import java.time.LocalDateTime;
@@ -299,15 +298,14 @@ class TodoListControllerIntegrationTest {
 
         updateRequest.setTasks(List.of(task1_updated, task3_new));
 
-        MvcResult result = mockMvc.perform(put("/api/lists/" + savedListId)
+        mockMvc.perform(put("/api/lists/" + savedListId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(savedListId)))
                 .andExpect(jsonPath("$.tasks", hasSize(2)))
                 .andExpect(jsonPath("$.tasks[?(@.text == 'Task 1 Updated Text')].done", contains(true)))
-                .andExpect(jsonPath("$.tasks[?(@.text == 'Task 3 New')].id", notNullValue()))
-                .andReturn();
+                .andExpect(jsonPath("$.tasks[?(@.text == 'Task 3 New')].id", notNullValue()));
 
         TodoList fetchedList = todoListRepository.findById(savedListId).orElseThrow();
         assertEquals(2, fetchedList.getTasks().size());
