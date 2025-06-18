@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Controller for managing Todo Lists.
@@ -30,8 +32,7 @@ public class TodoListController {
      */
     @GetMapping
     public ResponseEntity<List<TodoList>> getAllTodoLists() {
-        // Note: In a real application, we would get the userId from the security context
-        String userId = "user123"; // Mock user ID for development
+        String userId = getCurrentUserId();
         List<TodoList> todoLists = todoListService.getAllTodoListsByUserId(userId);
         return ResponseEntity.ok(todoLists);
     }
@@ -47,10 +48,7 @@ public class TodoListController {
         if (todoList.getTitle() == null || todoList.getTitle().trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-
-        // Set the mock user ID
-        todoList.setUserId("user123");
-
+        todoList.setUserId(getCurrentUserId());
         TodoList createdList = todoListService.createTodoList(todoList);
         return ResponseEntity.status(201).body(createdList);
     }
@@ -64,22 +62,15 @@ public class TodoListController {
     @DeleteMapping("/{listId}")
     public ResponseEntity<Void> deleteTodoList(@PathVariable String listId) {
         try {
-            // Verify the list exists and belongs to the user
-            TodoList list = todoListService.getTodoListById(listId)
-                .orElse(null);
-            
+            TodoList list = todoListService.getTodoListById(listId).orElse(null);
             if (list == null) {
                 return ResponseEntity.notFound().build();
             }
-            
-            // In a real application, we would check if the list belongs to the authenticated user
-            if (!"user123".equals(list.getUserId())) {
+            if (!getCurrentUserId().equals(list.getUserId())) {
                 return ResponseEntity.status(403).build();
             }
-
             todoListService.deleteTodoList(listId);
             return ResponseEntity.noContent().build();
-            
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
@@ -96,37 +87,33 @@ public class TodoListController {
     public ResponseEntity<TodoList> updateTodoList(
             @PathVariable String listId,
             @Valid @RequestBody TodoList todoList) {
-
-        // Verify the request consistency
         if (!listId.equals(todoList.getId())) {
             return ResponseEntity.badRequest().build();
         }
-
         try {
-            // Verify the list exists and belongs to the user
-            TodoList existingList = todoListService.getTodoListById(listId)
-                .orElse(null);
-            
+            TodoList existingList = todoListService.getTodoListById(listId).orElse(null);
             if (existingList == null) {
                 return ResponseEntity.notFound().build();
             }
-            
-            // In a real application, we would check if the list belongs to the authenticated user
-            if (!"user123".equals(existingList.getUserId())) {
+            if (!getCurrentUserId().equals(existingList.getUserId())) {
                 return ResponseEntity.status(403).build();
             }
-
-            // Preserve the original userId
             todoList.setUserId(existingList.getUserId());
-            
-            // Update the list
             TodoList updatedList = todoListService.updateTodoList(listId, todoList);
             return ResponseEntity.ok(updatedList);
-            
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    // Méthode utilitaire pour récupérer l'id utilisateur depuis le contexte de sécurité
+    private String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            return authentication.getName();
+        }
+        return null;
     }
 }
