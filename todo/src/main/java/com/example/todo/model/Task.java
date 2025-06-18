@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.example.todo.model.listener.TimestampListener;
+import com.example.todo.model.listener.TimestampedEntity;
 
 @Entity
 @EntityListeners(TimestampListener.class)

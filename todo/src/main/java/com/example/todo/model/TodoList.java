@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import com.example.todo.model.listener.TimestampListener;
+import com.example.todo.model.listener.TimestampedEntity;
 
 @Entity
 @EntityListeners(TimestampListener.class)

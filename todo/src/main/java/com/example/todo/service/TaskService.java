@@ -1,4 +1,4 @@
-package main.java.com.example.todo.service;
+package com.example.todo.service;
 
 import com.example.todo.model.Task;
 import com.example.todo.model.TodoList;
