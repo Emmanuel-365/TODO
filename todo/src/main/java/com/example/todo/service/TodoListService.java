@@ -55,19 +55,18 @@ public class TodoListService {
      */
     @Transactional
     public TodoList createTodoList(TodoList todoList) {
-        // Initialize collections if null
+        // Set creation timestamp for the list
+        todoList.setCreatedAt(LocalDateTime.now());
+
+        // Initialize tasks if null
         if (todoList.getTasks() == null) {
             todoList.setTasks(new ArrayList<>());
         }
 
-        // Set creation timestamp for the list
-        todoList.setCreatedAt(LocalDateTime.now());
-
-        // Set creation timestamp for any tasks
+        // Process each task
         for (Task task : todoList.getTasks()) {
-            if (task.getCreatedAt() == null) {
-                task.setCreatedAt(LocalDateTime.now());
-            }
+            task.setCreatedAt(LocalDateTime.now());
+            task.setTodoList(todoList); // Set the bidirectional relationship
         }
 
         return todoListRepository.save(todoList);
@@ -86,56 +85,46 @@ public class TodoListService {
     /**
      * Updates an existing Todo List.
      *
-     * @param todoList The Todo List with updated information.
+     * @param listId The ID of the Todo List to update.
+     * @param updatedList The Todo List with updated information.
      * @return The updated Todo List.
-     */    @Transactional
-    public TodoList updateTodoList(String listId, TodoList incomingTodoListData) {
-        TodoList existingTodoList = todoListRepository.findById(listId)
+     */
+    @Transactional
+    public TodoList updateTodoList(String listId, TodoList updatedList) {
+        TodoList existingList = todoListRepository.findById(listId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo List not found with ID: " + listId));
 
-        // Update basic properties from incomingTodoListData
-        existingTodoList.setTitle(incomingTodoListData.getTitle());
-        // existingTodoList.setUserId(incomingTodoListData.getUserId()); // userId should be handled by auth context
+        // Update basic properties
+        existingList.setTitle(updatedList.getTitle());
 
-        List<Task> tasksToKeepOrUpdate = new ArrayList<>();
-        Map<String, Task> existingTasksMap = existingTodoList.getTasks().stream()
+        // Create a map of existing tasks by ID for efficient lookup
+        Map<String, Task> existingTasksMap = existingList.getTasks().stream()
                 .collect(Collectors.toMap(Task::getId, Function.identity()));
 
-        if (incomingTodoListData.getTasks() != null) {
-            for (Task incomingTask : incomingTodoListData.getTasks()) {
-                if (incomingTask.getId() == null) { // New task
-                    incomingTask.setCreatedAt(LocalDateTime.now());
-                    // The new task must be associated with the TodoList entity for cascading persistence
-                    tasksToKeepOrUpdate.add(incomingTask);
-                } else { // Potential existing task
-                    Task taskToUpdate = existingTasksMap.get(incomingTask.getId());
-                    if (taskToUpdate != null) {
-                        // Update existing task's properties
-                        taskToUpdate.setText(incomingTask.getText());
-                        taskToUpdate.setDone(incomingTask.isDone());
-                        // taskToUpdate.setCreatedAt(taskToUpdate.getCreatedAt()); // createdAt is not changed
-                        tasksToKeepOrUpdate.add(taskToUpdate);
-                        existingTasksMap.remove(incomingTask.getId()); // Mark as processed
-                    } else {
-                        // Client sent a task with an ID, but it's not in the current list's tasks.
-                        // This is an invalid state according to API doc ("Task IDs should be preserved if they exist")
-                        throw new IllegalArgumentException("Task with ID " + incomingTask.getId() +
-                                                           " provided for update does not exist in TodoList " + listId);
-                    }
-                }
+        // Process updated tasks
+        List<Task> updatedTasks = new ArrayList<>();
+        for (Task updatedTask : updatedList.getTasks()) {
+            Task task;
+            if (updatedTask.getId() != null && existingTasksMap.containsKey(updatedTask.getId())) {
+                // Update existing task
+                task = existingTasksMap.get(updatedTask.getId());
+                task.setText(updatedTask.getText());
+                task.setDone(updatedTask.isDone());
+            } else {
+                // Create new task
+                task = new Task();
+                task.setText(updatedTask.getText());
+                task.setDone(updatedTask.isDone());
+                task.setCreatedAt(LocalDateTime.now());
             }
+            task.setTodoList(existingList);
+            updatedTasks.add(task);
         }
 
-        // existingTodoList.getTasks() is the managed collection.
-        // Clear it and add back only the tasks that should be present.
-        // Tasks that were in existingTasksMap but not added to tasksToKeepOrUpdate
-        // (i.e., tasks that were in existingTasksMap but not in incomingTaskData.getTasks() with a matching ID)
-        // will be removed by orphanRemoval=true.
-        existingTodoList.getTasks().clear();
-        existingTodoList.getTasks().addAll(tasksToKeepOrUpdate);
+        // Update the list's tasks
+        existingList.setTasks(updatedTasks);
 
-        // The existingTodoList.createdAt is not changed.
-        return todoListRepository.save(existingTodoList);
+        return todoListRepository.save(existingList);
     }
 }
 

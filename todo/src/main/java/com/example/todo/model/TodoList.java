@@ -5,10 +5,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import com.example.todo.model.listener.TimestampListener;
 
 @Entity
-public class TodoList {
+@EntityListeners(TimestampListener.class)
+public class TodoList implements TimestampedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -17,21 +20,31 @@ public class TodoList {
     @NotBlank(message = "TodoList title cannot be blank")
     private String title;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+        mappedBy = "todoList",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
     @Valid
-    private List<Task> tasks;
+    private List<Task> tasks = new ArrayList<>();
 
+    @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @NotNull(message = "User ID cannot be null")
     private String userId;
+
+    // Constructeur par défaut
+    public TodoList() {
+        this.tasks = new ArrayList<>();
+    }
 
     // Getters and Setters
     public String getId() {
         return id;
     }
 
-    public void setId(String id) {
+    protected void setId(String id) {
         this.id = id;
     }
 
@@ -48,13 +61,28 @@ public class TodoList {
     }
 
     public void setTasks(List<Task> tasks) {
-        this.tasks = tasks;
+        this.tasks.clear();
+        if (tasks != null) {
+            tasks.forEach(this::addTask);
+        }
+    }
+
+    // Helper methods to maintain the bidirectional relationship
+    public void addTask(Task task) {
+        tasks.add(task);
+        task.setTodoList(this);
+    }
+
+    public void removeTask(Task task) {
+        tasks.remove(task);
+        task.setTodoList(null);
     }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
+    @Override
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
