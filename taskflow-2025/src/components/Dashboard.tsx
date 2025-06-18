@@ -32,6 +32,7 @@ import ListCard from "./ListCard";
 import CreateListDialog from "./CreateListDialog"
 import TaskDialog from "./TaskDialog"
 
+
 interface DashboardProps {
   user: User;
   lists: TodoList[];
@@ -39,6 +40,7 @@ interface DashboardProps {
   onLogout: () => void;
   darkMode: boolean;
   toggleTheme: () => void;
+  isLoadingLists: boolean; // Add this line
 }
 
 export default function Dashboard({ user, lists, onListsChanged, onLogout, darkMode, toggleTheme }: DashboardProps) {

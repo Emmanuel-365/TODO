@@ -45,7 +45,7 @@ public class User {
     }
 
     public void setId(String id) {
-        this.id = id;
+        // Laisser vide pour empêcher la modification manuelle de l'id
     }
 
     public String getEmail() {
@@ -78,5 +78,15 @@ public class User {
 
     protected void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id='" + id + '\'' +
+                ", email='" + email + '\'' +
+                ", name='" + name + '\'' +
+                ", createdAt=" + createdAt +
+                '}';
     }
 }

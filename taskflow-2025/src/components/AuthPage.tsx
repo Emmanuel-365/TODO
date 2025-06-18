@@ -19,6 +19,7 @@ import {
 } from "@mui/material"
 import { CheckCircle, Rocket } from "@mui/icons-material"
 import type { User } from "../types"
+import { register, login } from "../services/api"
 
 interface AuthPageProps {
   onLogin: (user: User) => void
@@ -50,31 +51,42 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
     event.preventDefault()
     setError("")
     setLoading(true)
-
-    // Simulation d'un délai réseau
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    if (!formData.email || !formData.password) {
-      setError("Veuillez remplir tous les champs requis")
+    try {
+      if (!formData.email || !formData.password) {
+        setError("Veuillez remplir tous les champs requis")
+        setLoading(false)
+        return
+      }
+      if (activeTab === 1 && !formData.name) {
+        setError("Veuillez remplir tous les champs requis")
+        setLoading(false)
+        return
+      }
+      if (activeTab === 1) {
+        // Inscription
+        await register(formData.email, formData.name, formData.password)
+        // Optionnel : afficher un message de succès ou basculer sur l'onglet connexion
+        setActiveTab(0)
+        setLoading(false)
+        return
+      } else {
+        // Connexion
+        const auth = await login(formData.email, formData.password)
+        // Ici, tu peux stocker le token dans le localStorage ou le state global
+        // et récupérer les infos utilisateur si besoin
+        const user: User = {
+          id: "", // À remplacer par l'id réel si le backend le retourne
+          email: formData.email,
+          name: formData.email.split("@")[0],
+        }
+        setLoading(false)
+        onLogin(user)
+        return
+      }
+    } catch (err: any) {
+      setError(err.message || "Erreur réseau")
       setLoading(false)
-      return
     }
-
-    if (activeTab === 1 && !formData.name) {
-      setError("Veuillez remplir tous les champs requis")
-      setLoading(false)
-      return
-    }
-
-    // Simulation d'authentification
-    const user: User = {
-      id: Date.now().toString(),
-      email: formData.email,
-      name: activeTab === 1 ? formData.name : formData.email.split("@")[0],
-    }
-
-    setLoading(false)
-    onLogin(user)
   }
 
   return (

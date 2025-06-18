@@ -10,6 +10,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -64,16 +68,34 @@ public class AuthController {
         }
     }
 
+    // DTO pour l'inscription (UserRegistrationRequest)
+    public static class UserRegistrationRequest {
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email should be valid")
+        public String email;
+
+        @NotBlank(message = "Name is required")
+        @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
+        public String name;
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 6, message = "Password must be at least 6 characters long")
+        public String password;
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
+    public ResponseEntity<?> registerUser(@RequestBody UserRegistrationRequest registrationRequest) {
         try {
+            System.out.println("Registering user: " + registrationRequest.email + ", name: " + registrationRequest.name + ", password: " + registrationRequest.password);
+            User user = new User();
+            user.setEmail(registrationRequest.email);
+            user.setName(registrationRequest.name);
+            user.setPassword(registrationRequest.password);
             User registeredUser = userService.registerUser(user);
-            // Optionally, you could return the user object (without password) or a specific DTO
             return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully. ID: " + registeredUser.getId());
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
-            // Generic exception handler for other unexpected errors
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred during registration.");
         }
     }

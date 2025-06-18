@@ -7,79 +7,71 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { Box, Typography, Button } from "@mui/material";
 import AuthPage from "./components/AuthPage";
 import Dashboard from "./components/Dashboard";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import type { User, TodoList } from "./types"
+
+// Composant PrivateRoute
+function PrivateRoute({ user, children }: { user: User | null, children: React.ReactNode }) {
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [lists, setLists] = useState<TodoList[]>([]);
   const [darkMode, setDarkMode] = useState(false);
-  const [isLoadingLists, setIsLoadingLists] = useState(true);
+  const [isLoadingLists, setIsLoadingLists] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Récupère l'utilisateur au chargement
   useEffect(() => {
     const savedUser = localStorage.getItem("taskflow_user");
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
-
-    setIsLoadingLists(true);
-    setError(null); // Clear previous errors
-    api.getLists()
-      .then(fetchedLists => {
-        setLists(fetchedLists);
-      })
-      .catch(fetchError => {
-        console.error("Failed to fetch lists:", fetchError);
-        setError("Failed to load lists. Please try again later.");
-      })
-      .finally(() => {
-        setIsLoadingLists(false);
-      });
   }, []);
+
+  // Charge les listes UNIQUEMENT si l'utilisateur est connecté
+  useEffect(() => {
+    if (user) {
+      setIsLoadingLists(true);
+      setError(null);
+      api.getLists()
+        .then(fetchedLists => setLists(fetchedLists))
+        .catch(fetchError => {
+          console.error("Failed to fetch lists:", fetchError);
+          setError("Failed to load lists. Please try again later.");
+        })
+        .finally(() => setIsLoadingLists(false));
+    } else {
+      setLists([]);
+    }
+  }, [user]);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
     localStorage.setItem("taskflow_user", JSON.stringify(userData));
-
-    setIsLoadingLists(true);
-    setError(null); // Clear previous errors
-    api.getLists()
-      .then(fetchedLists => {
-        setLists(fetchedLists);
-      })
-      .catch(fetchError => {
-        console.error("Failed to fetch lists for user:", fetchError);
-        setError("Failed to load your data after login. Please try again.");
-      })
-      .finally(() => {
-        setIsLoadingLists(false);
-      });
   };
 
   const handleLogout = () => {
     setUser(null);
-    setLists([]); // Clear lists in state
+    setLists([]);
     localStorage.removeItem("taskflow_user");
-    // No need to call localStorage.removeItem("taskflow_lists") directly here anymore,
-    // as list operations should go through api.ts.
-    // If api.ts needs explicit clearing, a dedicated function like api.clearUserLists() could be added.
-    // For now, the next login will call api.getLists().
   };
 
   const handleListsUpdated = () => {
+    if (!user) return;
     setIsLoadingLists(true);
-    setError(null); // Clear previous errors
+    setError(null);
     api.getLists()
-      .then(fetchedLists => {
-        setLists(fetchedLists);
-      })
+      .then(fetchedLists => setLists(fetchedLists))
       .catch(fetchError => {
         console.error("Failed to fetch lists after update:", fetchError);
         setError("Failed to update lists. Please check your connection or try again.");
       })
-      .finally(() => {
-        setIsLoadingLists(false);
-      });
+      .finally(() => setIsLoadingLists(false));
   };
 
   const toggleTheme = () => {
@@ -169,8 +161,6 @@ function App() {
     },
   })
 
-  })
-
   if (error) {
     return (
       <ThemeProvider theme={theme}>
@@ -201,23 +191,30 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-        {!user ? (
-          <AuthPage onLogin={handleLogin} />
-        ) : (
-          <Dashboard
-            user={user}
-            lists={lists}
-            onListsChanged={handleListsUpdated}
-            onLogout={handleLogout}
-            darkMode={darkMode}
-            toggleTheme={toggleTheme}
-            isLoadingLists={isLoadingLists} // Pass the loading state
-          />
-        )}
-      </Box>
+      <BrowserRouter>
+        <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+          <Routes>
+            <Route path="/login" element={
+              !user ? <AuthPage onLogin={handleLogin} /> : <Navigate to="/" replace />
+            } />
+            <Route path="/" element={
+              <PrivateRoute user={user}>
+                <Dashboard
+                  user={user as User}
+                  lists={lists}
+                  onListsChanged={handleListsUpdated}
+                  onLogout={handleLogout}
+                  darkMode={darkMode}
+                  toggleTheme={toggleTheme}
+                  isLoadingLists={isLoadingLists}
+                />
+              </PrivateRoute>
+            } />
+          </Routes>
+        </Box>
+      </BrowserRouter>
     </ThemeProvider>
-  )
+  );
 }
 
 export default App

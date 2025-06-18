@@ -30,6 +30,9 @@ dependencies {
 	// H2 Database
 	runtimeOnly("com.h2database:h2")
 	
+	// Springdoc OpenAPI for Swagger UI
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
+	
 	// Development tools
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	

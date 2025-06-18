@@ -39,7 +39,7 @@ public class Task implements TimestampedEntity {
     }
 
     public void setId(String id) {
-        this.id = id;
+        // Laisser vide pour empêcher la modification manuelle de l'id
     }
 
     public String getText() {

@@ -22,6 +22,7 @@ import {
 } from "@mui/material"
 import { Delete, Edit, Add, Save, Cancel, CheckCircle, Schedule } from "@mui/icons-material"
 import type { TodoList, Task } from "../types"
+import {createTask, updateTask, deleteTask} from "../services/api" // Assurez-vous que le chemin d'importation est correct
 
 interface TaskDialogProps {
   open: boolean
@@ -35,39 +36,46 @@ export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDi
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState("")
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (newTaskText.trim()) {
-      const newTask: Task = {
-        id: Date.now().toString(),
-        text: newTaskText.trim(),
-        done: false,
-        createdAt: new Date().toISOString(),
+      try {
+        const newTask = await createTask(list.id, newTaskText.trim())
+        const updatedList = { ...list, tasks: [...list.tasks, newTask] }
+        onUpdateList(updatedList)
+        setNewTaskText("")
+      } catch (error) {
+        // Optionnel : afficher une erreur
       }
+    }
+  }
 
+  const handleToggleTask = async (taskId: string) => {
+    const task = list.tasks.find((t) => t.id === taskId)
+    if (task) {
+      try {
+        const updatedTask = await updateTask(list.id, { ...task, done: !task.done })
+        const updatedList = {
+          ...list,
+          tasks: list.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
+        }
+        onUpdateList(updatedList)
+      } catch (error) {
+        // Optionnel : afficher une erreur
+      }
+    }
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await deleteTask(list.id, taskId)
       const updatedList = {
         ...list,
-        tasks: [...list.tasks, newTask],
+        tasks: list.tasks.filter((task) => task.id !== taskId),
       }
-
       onUpdateList(updatedList)
-      setNewTaskText("")
+    } catch (error) {
+      // Optionnel : afficher une erreur
     }
-  }
-
-  const handleToggleTask = (taskId: string) => {
-    const updatedList = {
-      ...list,
-      tasks: list.tasks.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)),
-    }
-    onUpdateList(updatedList)
-  }
-
-  const handleDeleteTask = (taskId: string) => {
-    const updatedList = {
-      ...list,
-      tasks: list.tasks.filter((task) => task.id !== taskId),
-    }
-    onUpdateList(updatedList)
   }
 
   const handleStartEdit = (task: Task) => {
@@ -75,15 +83,23 @@ export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDi
     setEditingText(task.text)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingText.trim() && editingTaskId) {
-      const updatedList = {
-        ...list,
-        tasks: list.tasks.map((task) => (task.id === editingTaskId ? { ...task, text: editingText.trim() } : task)),
+      const task = list.tasks.find((t) => t.id === editingTaskId)
+      if (task) {
+        try {
+          const updatedTask = await updateTask(list.id, { ...task, text: editingText.trim() })
+          const updatedList = {
+            ...list,
+            tasks: list.tasks.map((t) => (t.id === editingTaskId ? updatedTask : t)),
+          }
+          onUpdateList(updatedList)
+          setEditingTaskId(null)
+          setEditingText("")
+        } catch (error) {
+          // Optionnel : afficher une erreur
+        }
       }
-      onUpdateList(updatedList)
-      setEditingTaskId(null)
-      setEditingText("")
     }
   }
 
