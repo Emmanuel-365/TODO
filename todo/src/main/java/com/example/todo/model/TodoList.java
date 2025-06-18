@@ -1,6 +1,9 @@
 package com.example.todo.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,13 +14,16 @@ public class TodoList {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @NotBlank(message = "TodoList title cannot be blank")
     private String title;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @Valid
     private List<Task> tasks;
 
     private LocalDateTime createdAt;
 
+    @NotNull(message = "User ID cannot be null")
     private String userId;
 
     // Getters and Setters

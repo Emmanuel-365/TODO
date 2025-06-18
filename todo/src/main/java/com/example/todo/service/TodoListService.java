@@ -9,7 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Service class for managing Todo Lists.
@@ -86,18 +89,53 @@ public class TodoListService {
      * @param todoList The Todo List with updated information.
      * @return The updated Todo List.
      */    @Transactional
-    public TodoList updateTodoList(TodoList todoList) {
-        if (!todoListRepository.existsById(todoList.getId())) {
-            throw new IllegalArgumentException("Todo List not found");
-        }
+    public TodoList updateTodoList(String listId, TodoList incomingTodoListData) {
+        TodoList existingTodoList = todoListRepository.findById(listId)
+                .orElseThrow(() -> new IllegalArgumentException("Todo List not found with ID: " + listId));
 
-        for (Task task : todoList.getTasks()) {
-            if (task.getCreatedAt() == null) {
-                task.setCreatedAt(LocalDateTime.now());
+        // Update basic properties from incomingTodoListData
+        existingTodoList.setTitle(incomingTodoListData.getTitle());
+        // existingTodoList.setUserId(incomingTodoListData.getUserId()); // userId should be handled by auth context
+
+        List<Task> tasksToKeepOrUpdate = new ArrayList<>();
+        Map<String, Task> existingTasksMap = existingTodoList.getTasks().stream()
+                .collect(Collectors.toMap(Task::getId, Function.identity()));
+
+        if (incomingTodoListData.getTasks() != null) {
+            for (Task incomingTask : incomingTodoListData.getTasks()) {
+                if (incomingTask.getId() == null) { // New task
+                    incomingTask.setCreatedAt(LocalDateTime.now());
+                    // The new task must be associated with the TodoList entity for cascading persistence
+                    tasksToKeepOrUpdate.add(incomingTask);
+                } else { // Potential existing task
+                    Task taskToUpdate = existingTasksMap.get(incomingTask.getId());
+                    if (taskToUpdate != null) {
+                        // Update existing task's properties
+                        taskToUpdate.setText(incomingTask.getText());
+                        taskToUpdate.setDone(incomingTask.isDone());
+                        // taskToUpdate.setCreatedAt(taskToUpdate.getCreatedAt()); // createdAt is not changed
+                        tasksToKeepOrUpdate.add(taskToUpdate);
+                        existingTasksMap.remove(incomingTask.getId()); // Mark as processed
+                    } else {
+                        // Client sent a task with an ID, but it's not in the current list's tasks.
+                        // This is an invalid state according to API doc ("Task IDs should be preserved if they exist")
+                        throw new IllegalArgumentException("Task with ID " + incomingTask.getId() +
+                                                           " provided for update does not exist in TodoList " + listId);
+                    }
+                }
             }
         }
 
-        return todoListRepository.save(todoList);
+        // existingTodoList.getTasks() is the managed collection.
+        // Clear it and add back only the tasks that should be present.
+        // Tasks that were in existingTasksMap but not added to tasksToKeepOrUpdate
+        // (i.e., tasks that were in existingTasksMap but not in incomingTaskData.getTasks() with a matching ID)
+        // will be removed by orphanRemoval=true.
+        existingTodoList.getTasks().clear();
+        existingTodoList.getTasks().addAll(tasksToKeepOrUpdate);
+
+        // The existingTodoList.createdAt is not changed.
+        return todoListRepository.save(existingTodoList);
     }
 }
 

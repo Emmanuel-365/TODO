@@ -1,6 +1,7 @@
 package com.example.todo.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,6 +11,7 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @NotBlank(message = "Task text cannot be blank")
     private String text;
 
     private boolean done;
