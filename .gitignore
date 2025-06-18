@@ -1,0 +1,59 @@
+# FRONTEND (taskflow-2025)
+taskflow-2025/node_modules/
+taskflow-2025/dist/
+taskflow-2025/build/
+taskflow-2025/.env
+# Logs
+*.log
+taskflow-2025/npm-debug.log*
+taskflow-2025/yarn-debug.log*
+taskflow-2025/yarn-error.log*
+# IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+
+# BACKEND (todo)
+todo/.gradle/
+todo/build/
+todo/out/
+todo/bin/
+todo/libs/
+todo/tmp/
+todo/.idea/
+todo/.vscode/
+todo/*.iml
+todo/*.ipr
+todo/*.iws
+todo/.DS_Store
+todo/Thumbs.db
+todo/**/*.class
+todo/**/*.jar
+todo/**/*.war
+todo/**/*.ear
+todo/**/generated/
+todo/**/test-classes/
+todo/**/reports/
+todo/**/*.log
+
+todo/gradle/wrapper/gradle-wrapper.jar
+
+taskflow-2025/package-lock.json
+taskflow-2025/yarn.lock
+
+# Global
+*.swp
+*.swo
+*.tmp
+*.bak
+*.orig
+*.local
+*~
+Icon?
+._*
+
+# Ne pas ignorer le fichier de configuration principal du backend
+!todo/src/main/resources/application.properties
