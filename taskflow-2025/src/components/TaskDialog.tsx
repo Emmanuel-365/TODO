@@ -28,10 +28,10 @@ interface TaskDialogProps {
   open: boolean
   onClose: () => void
   list: TodoList
-  onUpdateList: (list: TodoList) => void
+  onListsChanged: () => void // Remplace onUpdateList
 }
 
-export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDialogProps) {
+export default function TaskDialog({ open, onClose, list, onListsChanged }: TaskDialogProps) {
   const [newTaskText, setNewTaskText] = useState("")
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState("")
@@ -39,10 +39,9 @@ export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDi
   const handleAddTask = async () => {
     if (newTaskText.trim()) {
       try {
-        const newTask = await createTask(list.id, newTaskText.trim())
-        const updatedList = { ...list, tasks: [...list.tasks, newTask] }
-        onUpdateList(updatedList)
+        await createTask(list.id, newTaskText.trim())
         setNewTaskText("")
+        onListsChanged()
       } catch (error) {
         // Optionnel : afficher une erreur
       }
@@ -53,12 +52,8 @@ export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDi
     const task = list.tasks.find((t) => t.id === taskId)
     if (task) {
       try {
-        const updatedTask = await updateTask(list.id, { ...task, done: !task.done })
-        const updatedList = {
-          ...list,
-          tasks: list.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
-        }
-        onUpdateList(updatedList)
+        await updateTask(list.id, { ...task, done: !task.done })
+        onListsChanged()
       } catch (error) {
         // Optionnel : afficher une erreur
       }
@@ -68,11 +63,7 @@ export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDi
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask(list.id, taskId)
-      const updatedList = {
-        ...list,
-        tasks: list.tasks.filter((task) => task.id !== taskId),
-      }
-      onUpdateList(updatedList)
+      onListsChanged()
     } catch (error) {
       // Optionnel : afficher une erreur
     }
@@ -88,14 +79,10 @@ export default function TaskDialog({ open, onClose, list, onUpdateList }: TaskDi
       const task = list.tasks.find((t) => t.id === editingTaskId)
       if (task) {
         try {
-          const updatedTask = await updateTask(list.id, { ...task, text: editingText.trim() })
-          const updatedList = {
-            ...list,
-            tasks: list.tasks.map((t) => (t.id === editingTaskId ? updatedTask : t)),
-          }
-          onUpdateList(updatedList)
+          await updateTask(list.id, { ...task, text: editingText.trim() })
           setEditingTaskId(null)
           setEditingText("")
+          onListsChanged()
         } catch (error) {
           // Optionnel : afficher une erreur
         }

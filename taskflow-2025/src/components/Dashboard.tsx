@@ -288,7 +288,7 @@ export default function Dashboard({ user, lists, onListsChanged, onLogout, darkM
           open={taskDialogOpen}
           onClose={() => setTaskDialogOpen(false)}
           list={lists.find((list) => list.id === selectedListId)!}
-          onUpdateList={handleUpdateList}
+          onListsChanged={onListsChanged} // Remplace onUpdateList
         />
       )}
     </Box>

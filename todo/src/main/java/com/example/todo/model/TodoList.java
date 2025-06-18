@@ -32,7 +32,7 @@ public class TodoList implements TimestampedEntity {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    @NotNull(message = "User ID cannot be null")
+    // @NotNull(message = "User ID cannot be null")
     private String userId;
 
     // Constructeur par défaut

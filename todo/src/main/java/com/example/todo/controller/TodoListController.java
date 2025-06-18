@@ -2,6 +2,7 @@ package com.example.todo.controller;
 
 import com.example.todo.model.TodoList;
 import com.example.todo.service.TodoListService;
+import com.example.todo.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,9 +21,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class TodoListController {
 
     private final TodoListService todoListService;
+    private final UserRepository userRepository;
 
-    public TodoListController(TodoListService todoListService) {
+    public TodoListController(TodoListService todoListService, UserRepository userRepository) {
         this.todoListService = todoListService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -112,7 +115,12 @@ public class TodoListController {
     private String getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
-            return authentication.getName();
+            String email = authentication.getName();
+            // Cherche l'utilisateur par email pour obtenir son UUID
+            com.example.todo.model.User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                return user.getId();
+            }
         }
         return null;
     }

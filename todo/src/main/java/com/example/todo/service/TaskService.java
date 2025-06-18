@@ -68,11 +68,10 @@ public class TaskService {
     public Task updateTask(String taskId, Task updatedTask) {
         Task existingTask = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + taskId));
-
         // Vérifie que la tâche appartient à la même liste
-        if (!existingTask.getTodoList().getId().equals(updatedTask.getTodoList().getId())) {
-            throw new IllegalArgumentException("Cannot change the TodoList of a task");
-        }
+        // if (!existingTask.getTodoList().getId().equals(updatedTask.getTodoList().getId())) {
+        //     throw new IllegalArgumentException("Cannot change the TodoList of a task");
+        // }
 
         // Met à jour les champs modifiables
         existingTask.setText(updatedTask.getText());
